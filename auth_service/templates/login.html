@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        #messages { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; }
+        .msg { margin-bottom: 10px; }
+        .user { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<h2>Chat</h2>
+
+<div id="messages"></div>
+
+<form id="chatForm">
+    <input type="text" id="message" placeholder="Введите сообщение..." required>
+    <button type="submit">Отправить</button>
+</form>
+
+<script>
+    const chatId = 1;
+    const userId = 1;
+
+    async function loadMessages() {
+        const resp = await fetch(`/chats/chat/${chatId}/messages`);
+        const data = await resp.json();
+        const box = document.getElementById("messages");
+        box.innerHTML = "";
+        data.forEach(m => {
+            box.innerHTML += `<div class="msg"><span class="user">${m.user_id}:</span> ${m.message}</div>`;
+        });
+    }
+
+    document.getElementById("chatForm").onsubmit = async (e) => {
+        e.preventDefault();
+        const message = document.getElementById("message").value;
+
+        await fetch("/chats/send_message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                user_id: userId,
+                chat_id: chatId,
+                message: message
+            })
+        });
+
+        document.getElementById("message").value = "";
+        loadMessages();
+    };
+
+    loadMessages();
+    setInterval(loadMessages, 2000);
+</script>
+
+</body>
+</html>
