@@ -11,6 +11,12 @@ from fastapi.templating import Jinja2Templates
 from fastapi import Cookie, Depends, HTTPException, Request, status
 from jose import JWTError, jwt
 from utils.config import SECRET_KEY, ALGORITHM
+import asyncio
+from datetime import datetime, timedelta
+
+WATCHDOG_INTERVAL = 10      # как часто проверяем
+MESSAGE_TIMEOUT = 20        # сколько секунд ждём ответ от бота
+
 
 db = DataBaseChats()  # ← один раз для всего приложения
 service_message_alive = False
@@ -25,6 +31,49 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 app = FastAPI(title="Chats Service")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+async def bot_response_watchdog():
+    logging.info("🤖 Bot watchdog started")
+
+    while True:
+        try:
+            # 1. Получаем зависшие сообщения
+            stuck_messages = await db.get_stuck_messages(
+                older_than_seconds=MESSAGE_TIMEOUT
+            )
+
+            for msg in stuck_messages:
+                logging.warning(
+                    f"LLM timeout for message id={msg['id']} chat={msg['chat_id']}"
+                )
+
+                # 2. Помечаем сообщение как FAILED
+                await db.mark_message_failed(msg["id"])
+
+                # 3. Формируем system/bot сообщение
+                bot_message = {
+                    "chat_id": msg["chat_id"],
+                    "message": "🤖 Ассистент временно недоступен. Попробуйте позже.",
+                    "is_from_bot": True,
+                }
+
+                # 4. Сохраняем в БД
+                await db.add_message(
+                    username=msg["username"],
+                    message=bot_message["message"],
+                    chat_id=msg["chat_id"],
+                    is_from_bot=True
+                )
+
+                # 5. Отправляем в WebSocket
+                await broadcast(msg["chat_id"], bot_message)
+
+        except Exception as e:
+            logging.error(f"Watchdog error: {e}")
+
+        await asyncio.sleep(WATCHDOG_INTERVAL)
+
+
 
 def get_auth_data():
     return {"secret_key": SECRET_KEY, "algorithm": ALGORITHM}
@@ -110,6 +159,10 @@ async def startup():
     global service_message_alive
     service_message_alive = True
     await db.init_db_pool()
+
+    # 🚀 старт watchdog-а
+    asyncio.create_task(bot_response_watchdog())
+
 
 @app.on_event("shutdown")
 async def shutdown():

@@ -223,4 +223,21 @@ class DataBaseChats:
             """)
             return chat_id
 
+    async def get_stuck_messages(self, older_than_seconds: int):
+        return await self.pool.fetch("""
+            SELECT id, chat_id, username
+            FROM chats
+            WHERE is_from_bot = FALSE
+              AND status = 'PROCESSING'
+              AND created_at < now() - interval '%s seconds'
+              AND created_at >= '2025-12-15'
+        """ % older_than_seconds)
+
+    async def mark_message_failed(self, message_id: int):
+        await self.pool.execute("""
+            UPDATE chats
+            SET status = 'FAILED'
+            WHERE id = $1
+        """, message_id)
+
 
