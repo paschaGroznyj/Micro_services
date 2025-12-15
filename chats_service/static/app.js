@@ -1,17 +1,24 @@
 // static/js/app.js
 let ws = null;
-const CHAT_ID = window.CHAT_ID || 1; // ? будет подставлено из шаблона
+const CHAT_ID = window.CHAT_ID || 1; // ? пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
 function connectWS() {
-    if (ws) return; // уже подключены
+    if (ws) return; // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 
-    ws = new WebSocket(`ws://${location.host}/ws/chat/${CHAT_ID}`);
+    ws = new WebSocket(`ws://127.0.0.1:8001/ws/chat/${CHAT_ID}`);
 
     ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
         const div = document.createElement("div");
-        div.className = msg.is_from_bot ? "bot" : "user";
-        div.textContent = `${msg.is_from_bot ? "?" : "?"}: ${msg.message}`;
+       if (msg.is_from_bot == true){
+            bot_or_user = "bot"
+        }
+        else{
+            bot_or_user = "user"
+        }
+        console.log(bot_or_user)
+        div.className = bot_or_user === "bot" ? "bot" : "user";
+        div.textContent = `${msg.is_from_bot ? "рџ¤–" : "рџ‘¤"}: ${msg.message}`;
         document.getElementById("history").appendChild(div);
     };
 
@@ -33,7 +40,7 @@ async function sendMessage() {
 
     const payload = {
         user_id: parseInt(userId),
-        chat_id: CHAT_ID,  // ? берём из URL
+        chat_id: CHAT_ID,  // ? пїЅпїЅпїЅпїЅ пїЅпїЅ URL
         message: message.trim()
     };
 
@@ -45,9 +52,9 @@ async function sendMessage() {
 
     if (resp.ok) {
         document.getElementById("message").value = "";
-        connectWS(); // подключаем WS, если ещё не подключены
+        connectWS(); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ WS, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
     } else {
-        alert("Ошибка отправки");
+        alert("пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ");
     }
 }
 
@@ -56,18 +63,35 @@ async function loadMessages() {
     const data = await resp.json();
 
     const historyEl = document.getElementById("history");
+    let bot_or_user;
     historyEl.innerHTML = "";
     data.messages.forEach(msg => {
         const div = document.createElement("div");
-        div.className = msg.is_from_bot ? "bot" : "user";
-        div.textContent = `${msg.is_from_bot ? "?" : "?"}: ${msg.message}`;
+        console.log(msg.is_from_bot)
+        if (msg.is_from_bot == true){
+            bot_or_user = "bot"
+        }
+        else{
+            bot_or_user = "user"
+        }
+        console.log(bot_or_user)
+        div.className = bot_or_user === "bot" ? "bot" : "user";
+        div.textContent = `${msg.is_from_bot ? "рџ¤–" : "рџ‘¤"}: ${msg.message}`;
         historyEl.appendChild(div);
     });
 
     connectWS();
 }
 
-// Загружаем историю при старте
+// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
 loadMessages();
 window.sendMessage = sendMessage;
 window.loadMessages = loadMessages;
+
+function ensureWS() {
+    if (!ws || ws.readyState === WebSocket.CLOSED) {
+        connectWS();
+    }
+}
+
+setInterval(ensureWS, 3000);
