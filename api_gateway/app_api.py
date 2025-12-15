@@ -504,7 +504,7 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "api_gateway.second_api:app",
+        "api_gateway.app_api:app",
         host="127.0.0.1",
         port=int(PORT_GATEWAY_PORT),
         reload=True
