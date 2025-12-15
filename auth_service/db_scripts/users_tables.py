@@ -53,7 +53,7 @@ class DataBaseUser:
             """
         )
 
-    async def check_user_password(self, username: str, password: str = None):
+    async def check_user_password(self, username: str, password: str = None, back_user_id=False):
         async with self.pool.acquire() as conn:
             if password:
                 user_in_db = await conn.fetchrow("""
@@ -63,13 +63,24 @@ class DataBaseUser:
                     return None
 
                 if bcrypt.checkpw(password.encode(), user_in_db["password_hash"].encode()):
+                    if back_user_id == True:
+                        user_id = await conn.fetchrow("""
+                                            SELECT id FROM users WHERE username = $1
+                                        """, username)
+                        return user_id
                     return user_in_db
                 return None
             else:
                 # Просто проверка наличия юзера
-                return await conn.fetchrow("""
-                    SELECT username FROM users WHERE username = $1
-                """, username)
+                user = await conn.fetchrow("""
+                                SELECT id, username FROM users WHERE username = $1
+                            """, username)
+                if user:
+                    return {
+                        "id": user["id"],
+                        "username": user["username"]
+                    }
+                return None
 
     async def add_user(self, username: str, password: str):
         # Хэшируем пароль (bcrypt)
@@ -93,4 +104,3 @@ class DataBaseUser:
         else:
             logging.error(f"Юзер {username} уже в домике (найден в БД)")
             return None
-

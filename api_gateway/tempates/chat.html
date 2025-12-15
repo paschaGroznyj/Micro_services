@@ -8,12 +8,18 @@
 <body>
     <div id="chat-app">
         <nav class="navbar">
-            <div class="nav-brand">💬 Чат Приложение</div>
-            <div class="nav-user">
-                <span>Привет, <span id="username">{{ user.username }}</span>!</span>
-                <button id="logout-btn" class="btn-logout">Выйти</button>
-            </div>
-        </nav>
+        <div class="nav-brand">💬 Чат Приложение</div>
+        <div class="nav-user">
+            <span>Привет, <span id="username">{{ user.username }}</span>!</span>
+
+            <!-- Форма выхода -->
+            <form method="post" action="/logout-web" style="display: inline;">
+                <button type="submit" class="btn-logout" onclick="return confirm('Вы уверены, что хотите выйти?');">
+                    Выйти
+                </button>
+            </form>
+        </div>
+    </nav>
 
         <div class="chat-layout">
             <!-- Сайдбар с чатами -->
@@ -43,6 +49,6 @@
         </div>
     </div>
 
-    <script src="/static/js/app-simple.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>
